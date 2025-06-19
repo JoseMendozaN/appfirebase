@@ -151,3 +151,4 @@ export default function App() {
     </NavigationContainer>
   );
 }
+// Este es el punto de entrada de tu aplicación React Native.
