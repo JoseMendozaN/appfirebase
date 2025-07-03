@@ -1,3 +1,4 @@
+// ver usuarios.... UserManagementScreen.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { db } from '../../../firebaseConfig'; // 👈 Cambiado de firestore a db

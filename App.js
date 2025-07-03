@@ -15,6 +15,9 @@ import RegisterAdminScreen from './src/screens/Admin/RegisterAdminScreen';
 import HomeAdminScreen from './src/screens/Admin/HomeAdminScreen';
 import UserManagementScreen from './src/screens/Admin/UserManagementScreen';
 import PuntosScreen from './src/screens/Admin/PuntosScreen';
+import BeneficiosAdminScreen from './src/screens/Admin/BeneficiosAdminScreen';
+import PremiosAdminScreen from './src/screens/Admin/PremiosAdminScreen';
+
 
 const Stack = createNativeStackNavigator();
 
@@ -89,6 +92,34 @@ export default function App() {
             component={PuntosScreen} 
             options={{ 
               title: 'Gestión de Puntos',
+              headerStyle: {
+                backgroundColor: '#0a1128',
+              },
+              headerTintColor: '#fff',
+              headerTitleStyle: {
+                fontWeight: 'bold',
+              },
+            }} 
+          />
+          <Stack.Screen 
+            name="BeneficiosAdminScreen" 
+            component={BeneficiosAdminScreen} 
+            options={{ 
+              title: 'Gestión de Beneficios',
+              headerStyle: {
+                backgroundColor: '#0a1128',
+              },
+              headerTintColor: '#fff',
+              headerTitleStyle: {
+                fontWeight: 'bold',
+              },
+            }} 
+          />
+          <Stack.Screen 
+            name="PremiosAdminScreen" 
+            component={PremiosAdminScreen} 
+            options={{ 
+              title: 'Gestión de Premios',
               headerStyle: {
                 backgroundColor: '#0a1128',
               },

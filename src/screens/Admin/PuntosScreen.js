@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import {
+  View, Text, StyleSheet, ScrollView, ActivityIndicator,
+  TouchableOpacity, Alert, Modal, TextInput, Button
+} from 'react-native';
 import { db } from '../../../firebaseConfig';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore'; // Importa limit
+import {
+  collection, getDocs, query, orderBy, limit,
+  doc, updateDoc
+} from 'firebase/firestore';
 import { BarChart } from 'react-native-chart-kit';
 import { Dimensions } from 'react-native';
 
@@ -17,7 +23,10 @@ const COLORS = {
 export default function PuntosScreen() {
   const [topUsers, setTopUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState('all'); // 'week', 'month', 'all'
+  const [timeRange, setTimeRange] = useState('all');
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newPoints, setNewPoints] = useState('');
 
   useEffect(() => {
     fetchTopUsers();
@@ -26,47 +35,43 @@ export default function PuntosScreen() {
   const fetchTopUsers = async () => {
     try {
       setLoading(true);
-      
       const usersRef = collection(db, 'clientes');
-      // Asegúrate de importar 'limit' desde firebase/firestore
-      let q = query(usersRef, orderBy('puntos', 'desc'), limit(10));
-
+      const q = query(usersRef, orderBy('puntos', 'desc'), limit(10));
       const querySnapshot = await getDocs(q);
-      const usersData = [];
-
-      querySnapshot.forEach((doc) => {
-        usersData.push({
-          id: doc.id,
-          ...doc.data(),
-        });
-      });
-
+      const usersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setTopUsers(usersData);
     } catch (error) {
-      console.error("Error al cargar estadísticas:", error);
       Alert.alert("Error", "No se pudieron cargar los datos. Inténtalo de nuevo.");
     } finally {
       setLoading(false);
     }
   };
 
-  const renderUserItem = (user, index) => (
-    <View key={user.id} style={styles.userCard}>
-      <View style={styles.rankContainer}>
-        <Text style={styles.rankText}>{index + 1}</Text>
-      </View>
-      <View style={styles.userInfoContainer}>
-        <Text style={styles.userName}>{user.nombre || 'Usuario'}</Text>
-        <Text style={styles.userEmail}>{user.email || 'sin email'}</Text>
-      </View>
-      <View style={styles.pointsContainer}>
-        <Text style={styles.pointsText}>{user.puntos || 0}</Text>
-        <Text style={styles.pointsLabel}>puntos</Text>
-      </View>
-    </View>
-  );
+  const handleUpdatePoints = async () => {
+    if (!newPoints.match(/^[-+]?\d+$/)) {
+      return Alert.alert('Error','Los puntos deben ser un número entero (positivo o negativo).');
+    }
+    const pts = parseInt(newPoints, 10);
+    try {
+      if (selectedUser.id) {
+        const ref = doc(db, 'clientes', selectedUser.id);
+        await updateDoc(ref, {
+          puntos: (selectedUser.puntos || 0) + pts,
+        });
+        setModalVisible(false);
+        fetchTopUsers();
+      }
+    } catch (e) {
+      Alert.alert('Error', e.message);
+    }
+  };
 
-  // Preparar datos para el gráfico
+  const openModal = (user) => {
+    setSelectedUser(user);
+    setNewPoints('');
+    setModalVisible(true);
+  };
+
   const chartData = {
     labels: topUsers.slice(0, 5).map(user => user.nombre?.split(' ')[0] || 'Usuario'),
     datasets: [{
@@ -87,26 +92,19 @@ export default function PuntosScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 30 }}>
       <Text style={styles.title}>Estadísticas de Puntos</Text>
-      
+
       <View style={styles.timeRangeContainer}>
-        <TouchableOpacity 
-          style={[styles.timeButton, timeRange === 'week' && styles.activeTimeButton]}
-          onPress={() => setTimeRange('week')}
-        >
-          <Text style={[styles.timeButtonText, timeRange === 'week' && styles.activeTimeButtonText]}>Semana</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.timeButton, timeRange === 'month' && styles.activeTimeButton]}
-          onPress={() => setTimeRange('month')}
-        >
-          <Text style={[styles.timeButtonText, timeRange === 'month' && styles.activeTimeButtonText]}>Mes</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.timeButton, timeRange === 'all' && styles.activeTimeButton]}
-          onPress={() => setTimeRange('all')}
-        >
-          <Text style={[styles.timeButtonText, timeRange === 'all' && styles.activeTimeButtonText]}>Todos</Text>
-        </TouchableOpacity>
+        {['week', 'month', 'all'].map(range => (
+          <TouchableOpacity
+            key={range}
+            style={[styles.timeButton, timeRange === range && styles.activeTimeButton]}
+            onPress={() => setTimeRange(range)}
+          >
+            <Text style={[styles.timeButtonText, timeRange === range && styles.activeTimeButtonText]}>
+              {range === 'week' ? 'Semana' : range === 'month' ? 'Mes' : 'Todos'}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       <View style={styles.section}>
@@ -116,7 +114,6 @@ export default function PuntosScreen() {
             data={chartData}
             width={Dimensions.get('window').width - 32}
             height={220}
-            yAxisLabel=""
             yAxisSuffix=" pts"
             chartConfig={{
               backgroundColor: COLORS.card,
@@ -125,19 +122,10 @@ export default function PuntosScreen() {
               decimalPlaces: 0,
               color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
               labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-              style: {
-                borderRadius: 16,
-              },
-              propsForDots: {
-                r: "4",
-                strokeWidth: "2",
-                stroke: COLORS.primary,
-              },
+              style: { borderRadius: 16 },
+              propsForDots: { r: "4", strokeWidth: "2", stroke: COLORS.primary },
             }}
-            style={{
-              marginVertical: 8,
-              borderRadius: 16,
-            }}
+            style={{ marginVertical: 8, borderRadius: 16 }}
           />
         ) : (
           <View style={styles.emptyChart}>
@@ -149,13 +137,52 @@ export default function PuntosScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Top 10 Clientes</Text>
         {topUsers.length > 0 ? (
-          topUsers.map((user, index) => renderUserItem(user, index))
+          topUsers.map((user, index) => (
+            <TouchableOpacity key={user.id} onPress={() => openModal(user)} style={styles.userCard}>
+              <View style={styles.rankContainer}>
+                <Text style={styles.rankText}>{index + 1}</Text>
+              </View>
+              <View style={styles.userInfoContainer}>
+                <Text style={styles.userName}>{user.nombre || 'Usuario'}</Text>
+                <Text style={styles.userEmail}>{user.correo || 'sin email'}</Text>
+              </View>
+              <View style={styles.pointsContainer}>
+                <Text style={styles.pointsText}>{user.puntos || 0}</Text>
+                <Text style={styles.pointsLabel}>puntos</Text>
+              </View>
+            </TouchableOpacity>
+          ))
         ) : (
           <View style={styles.emptyList}>
             <Text style={styles.emptyText}>No se encontraron usuarios</Text>
           </View>
         )}
       </View>
+
+      <Modal
+        transparent
+        visible={modalVisible}
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContent}>
+            <Text style={styles.sectionTitle}>Modificar Puntos</Text>
+            <Text style={{ color: COLORS.text }}>Puntos actuales: {selectedUser?.puntos || 0}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Agregar (+) o Quitar (-) puntos"
+              keyboardType="numeric"
+              value={newPoints}
+              onChangeText={setNewPoints}
+            />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 10 }}>
+              <Button title="Actualizar" onPress={handleUpdatePoints} />
+              <Button title="Cancelar" onPress={() => setModalVisible(false)} color="gray" />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -290,5 +317,25 @@ const styles = StyleSheet.create({
   emptyText: {
     color: COLORS.textSecondary,
     fontSize: 16,
+  },
+// Modal styles
+    modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '90%',
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
   },
 });

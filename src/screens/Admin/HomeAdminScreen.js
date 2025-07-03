@@ -1,3 +1,4 @@
+//principal de la pantalla de administración
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native'; // Añade esta importación
@@ -20,28 +21,28 @@ export default function HomeAdminScreen() {
       title: 'Gestión de Usuarios', 
       icon: '👥', 
       description: 'Administra todos los usuarios registrados',
-      onPress: () => navigation.navigate('UserManagement') // Añade esta función
+      onPress: () => navigation.navigate('UserManagement') 
     },
     { 
       id: 2, 
       title: 'Gestión de Beneficios', 
       icon: '🎁', 
       description: 'Crea y edita beneficios disponibles',
-      onPress: () => console.log('Gestión de Beneficios') 
+      onPress: () => navigation.navigate('BeneficiosAdminScreen') 
     },
     { 
       id: 3, 
       title: 'Gestión de Premios', 
       icon: '🏆', 
       description: 'Administra los premios canjeables',
-      onPress: () => console.log('Gestión de Premios') 
+      onPress: () => navigation.navigate('PremiosAdminScreen') 
     },
     { 
       id: 4, 
       title: 'Alta de Puntos', 
       icon: '📊', 
       description: 'Visualiza métricas y estadísticas',
-      onPress: () => navigation.navigate('PuntosScreen') // Cambia a la pantalla de puntos
+      onPress: () => navigation.navigate('PuntosScreen') 
     },
     { 
       id: 5, 
